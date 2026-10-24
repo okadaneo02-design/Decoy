@@ -1,0 +1,1259 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}</style></head><body>
+<style>
+:root{
+  --bg:#0b0e17; --panel:#161a2b; --panel2:#1f2540; --ink:#e9edff; --muted:#8b93b8;
+  --blue:#4aa3ff; --red:#ff5a6a; --green:#44d07b; --yellow:#ffd34a; --purple:#b07bff;
+  --radius:16px; --shadow:0 12px 40px rgba(0,0,0,.45);
+  font-family:"Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:radial-gradient(1200px 800px at 50% -10%,#1a2140,#0b0e17 60%);color:var(--ink);overflow:hidden;user-select:none}
+#app{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+
+/* ---------- screens ---------- */
+.screen{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:24px}
+.screen.active{display:flex;animation:fade .3s ease}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1}}
+
+.logo{text-align:center}
+.title{font-size:clamp(52px,11vw,120px);letter-spacing:6px;font-weight:900;
+  background:linear-gradient(180deg,#fff,#9fb4ff);-webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 6px 22px rgba(74,163,255,.35))}
+.title .accent{color:var(--red);-webkit-text-fill-color:var(--red)}
+.title .mask{-webkit-text-fill-color:initial;filter:none}
+.tagline{color:var(--muted);letter-spacing:4px;text-transform:uppercase;font-size:14px;margin-top:6px}
+.build-note{color:var(--muted);font-size:12px;max-width:520px;text-align:center}
+
+.menu-buttons{display:flex;flex-direction:column;gap:12px;width:min(340px,80vw)}
+.btn{appearance:none;border:1px solid #2b3358;background:var(--panel2);color:var(--ink);
+  padding:14px 18px;border-radius:var(--radius);font-size:16px;font-weight:700;cursor:pointer;
+  transition:.15s transform,.15s background,.15s border;letter-spacing:.5px}
+.btn:hover{transform:translateY(-2px);background:#2a3156;border-color:#3a4a7a}
+.btn:active{transform:translateY(0)}
+.btn-primary{background:linear-gradient(180deg,var(--blue),#2f7fe0);border-color:#2f7fe0;color:#061022}
+.btn-primary:hover{background:linear-gradient(180deg,#5fb0ff,#3a8bef)}
+
+h2{font-size:30px;font-weight:900;letter-spacing:1px}
+h3{font-size:16px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px}
+.panel{background:var(--panel);border:1px solid #232a48;border-radius:var(--radius);padding:22px;
+  box-shadow:var(--shadow);width:min(460px,92vw);display:flex;flex-direction:column;gap:14px}
+label{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted)}
+input[type=text],input:not([type]),input[type=number]{background:#0e1222;border:1px solid #2b3358;border-radius:10px;
+  color:var(--ink);padding:11px 12px;font-size:15px}
+input:focus{outline:2px solid var(--blue)}
+.select{background:#0e1222;border:1px solid #2b3358;border-radius:10px;color:var(--ink);
+  padding:9px 12px;font-size:15px;font-weight:700;cursor:pointer;min-width:140px}
+.select:focus{outline:2px solid var(--blue)}
+.row{display:flex;gap:10px;justify-content:space-between}
+.row .btn{flex:1}
+.status{min-height:18px;font-size:13px;color:var(--yellow)}
+.hint{font-size:12px;color:var(--muted)}
+code{background:#0e1222;padding:2px 6px;border-radius:6px;color:var(--green);font-size:12px}
+.code-chip{background:#0e1222;border:1px solid var(--blue);padding:3px 12px;border-radius:10px;
+  letter-spacing:4px;font-size:22px;color:var(--blue)}
+
+/* ---------- lobby ---------- */
+.lobby{width:min(560px,94vw)}
+.players{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.player-card{background:var(--panel2);border:1px solid #2b3358;border-radius:12px;padding:14px;
+  display:flex;flex-direction:column;gap:6px;align-items:center}
+.pc-role{font-weight:800}
+.pc-name{font-size:18px}
+.pc-ready{font-size:12px;color:var(--muted)}
+.player-card.ready{border-color:var(--green)}
+.player-card.ready .pc-ready{color:var(--green)}
+.map-choices{display:flex;gap:10px;justify-content:center}
+.map-btn{flex:1;background:var(--panel2);border:1px solid #2b3358;color:var(--ink);padding:14px;
+  border-radius:12px;cursor:pointer;font-size:15px;font-weight:700}
+.map-btn.sel{border-color:var(--yellow);box-shadow:0 0 0 2px rgba(255,211,74,.3)}
+
+/* ---------- game ---------- */
+#screen-game{padding:0}
+#game-canvas{position:absolute;inset:0;width:100%;height:100%;background:#05060c;cursor:crosshair}
+
+#hud-top{position:absolute;top:14px;left:0;right:0;display:flex;justify-content:center;gap:12px;z-index:5;pointer-events:none}
+.hud-pill{background:rgba(16,20,38,.82);border:1px solid #2b3358;border-radius:12px;padding:8px 16px;
+  font-weight:800;backdrop-filter:blur(6px);font-size:16px}
+.timer{font-size:22px;min-width:92px;text-align:center}
+.timer.warn{color:var(--red);animation:pulse .8s infinite}
+@keyframes pulse{50%{opacity:.5}}
+.s-hider{color:var(--blue)}.s-seeker{color:var(--red)}.s-sep{color:var(--muted)}
+
+.radar-banner{position:absolute;top:70px;left:50%;transform:translateX(-50%);z-index:6;
+  background:rgba(255,90,106,.18);border:1px solid var(--red);color:#ffd0d5;padding:8px 18px;border-radius:12px;
+  font-weight:800;letter-spacing:1px}
+#radar-dir{font-size:22px;display:inline-block}
+
+#sound-hud{position:absolute;inset:0;z-index:4;pointer-events:none}
+.sound-dot{position:absolute;left:50%;top:50%;font-size:26px;transform-origin:center;
+  transition:opacity .2s;filter:drop-shadow(0 2px 6px rgba(0,0,0,.6))}
+
+#hotbar{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);display:flex;gap:10px;z-index:5}
+.slot{width:62px;height:62px;background:rgba(16,20,38,.85);border:1px solid #2b3358;border-radius:14px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;overflow:hidden}
+.slot .ico{font-size:24px;line-height:1}
+.slot .key{position:absolute;top:3px;left:5px;font-size:10px;color:var(--muted);font-weight:800}
+.slot .cnt{position:absolute;bottom:3px;right:5px;font-size:11px;color:var(--yellow);font-weight:800}
+.slot .cool{position:absolute;inset:0;background:rgba(5,8,18,.78);transform-origin:bottom;transform:scaleY(0)}
+.slot.ready{border-color:var(--green)}
+.slot.ready .ico{filter:drop-shadow(0 0 6px rgba(68,208,123,.7))}
+
+#minimap{position:absolute;bottom:18px;right:18px;width:180px;height:180px;background:rgba(10,14,28,.8);
+  border:1px solid #2b3358;border-radius:14px;z-index:5}
+
+.toast{position:absolute;top:46%;left:50%;transform:translate(-50%,-50%);z-index:7;
+  background:rgba(16,20,38,.92);border:1px solid #2b3358;border-radius:14px;padding:14px 26px;
+  font-size:22px;font-weight:900;letter-spacing:1px}
+.toast.flash{animation:toastpop .5s ease}
+@keyframes toastpop{from{transform:translate(-50%,-50%) scale(.6);opacity:0}}
+
+/* ---------- overlays ---------- */
+.overlay{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;
+  background:rgba(5,8,18,.72);backdrop-filter:blur(4px)}
+.hidden{display:none!important}
+#countdown-num{font-size:160px;font-weight:900;color:var(--blue);filter:drop-shadow(0 0 40px rgba(74,163,255,.6));
+  animation:cd 1s ease infinite}
+@keyframes cd{0%{transform:scale(1.4);opacity:0}30%{opacity:1}100%{transform:scale(.7);opacity:0}}
+
+.end-card,.how-card{background:var(--panel);border:1px solid #232a48;border-radius:20px;padding:30px;
+  box-shadow:var(--shadow);width:min(640px,94vw);text-align:center;display:flex;flex-direction:column;gap:16px}
+.end-score{font-size:40px;font-weight:900;letter-spacing:4px}
+.how-grid{display:grid;grid-template-columns:1fr 1fr;gap:22px;text-align:left}
+.how-grid ul{list-style:none;display:flex;flex-direction:column;gap:7px;font-size:14px;color:#cdd4f5}
+.how-grid b{color:var(--yellow)}
+.set-row{flex-direction:row;align-items:center;justify-content:space-between;font-size:15px;color:var(--ink)}
+@media(max-width:560px){.how-grid{grid-template-columns:1fr}.players{grid-template-columns:1fr}}
+
+/* ---- invite link box (lobby) ---- */
+.invite{background:#0e1424;border:1px solid #2b3a63;border-radius:12px;padding:12px 14px;margin:4px 0 10px}
+.invite h3{margin:0 0 8px;color:#5ad1ff;font-size:15px}
+.invite .row{display:flex;gap:8px;align-items:center}
+#invite-link{flex:1;min-width:0;background:#060a14;border:1px solid #2b3a63;border-radius:8px;
+  padding:9px 10px;color:#eaf0ff;font-size:13px;font-family:monospace}
+.invite .hint{margin:8px 0 0;color:#8fa0c8;font-size:12px}
+
+</style>
+<div id="app">
+
+  <!-- ======================= MAIN MENU ======================= -->
+  <section id="screen-menu" class="screen active">
+    <div class="logo">
+      <h1 class="title">DE<span class="accent">C</span>OY <span class="mask">🎭</span></h1>
+      <p class="tagline">Hide. Seek. Deceive.</p>
+    </div>
+    <div class="menu-buttons">
+      <button class="btn btn-primary" data-action="solo">▶ PLAY (vs AI)</button>
+      <button class="btn" data-action="host">🖥️ HOST ROOM</button>
+      <button class="btn" data-action="join">🔗 JOIN ROOM</button>
+      <button class="btn" data-action="how">❓ HOW TO PLAY</button>
+      <button class="btn" data-action="settings">⚙ SETTINGS</button>
+    </div>
+    <p class="build-note">Single-player works anywhere (incl. GitHub Pages). Multiplayer needs the Node server — see README.</p>
+  </section>
+
+  <!-- ======================= JOIN ======================= -->
+  <section id="screen-join" class="screen">
+    <h2>Join a Room</h2>
+    <div class="panel">
+      <label>Your name <input id="join-name" maxlength="14" placeholder="Player" /></label>
+      <label>Server address <input id="join-server" placeholder="ws://192.168.1.23:8080" /></label>
+      <label>Room code <input id="join-code" maxlength="6" placeholder="6 digits" inputmode="numeric" /></label>
+      <div class="row">
+        <button class="btn" data-action="back">← Back</button>
+        <button class="btn btn-primary" data-action="join-connect">Connect</button>
+      </div>
+      <p id="join-status" class="status"></p>
+    </div>
+  </section>
+
+  <!-- ======================= HOST ======================= -->
+  <section id="screen-host" class="screen">
+    <h2>Host a Room</h2>
+    <div class="panel">
+      <label>Your name <input id="host-name" maxlength="14" placeholder="Host" /></label>
+      <label>Server address <input id="host-server" placeholder="ws://localhost:8080" value="ws://localhost:8080" /></label>
+      <div class="row">
+        <button class="btn" data-action="back">← Back</button>
+        <button class="btn btn-primary" data-action="host-create">Create Room</button>
+      </div>
+      <p id="host-status" class="status"></p>
+      <p class="hint">Start the server first: <code>npm install &amp;&amp; npm start</code>. Others join with your LAN IP, e.g. <code>ws://192.168.x.x:8080</code>.</p>
+    </div>
+  </section>
+
+  <!-- ======================= LOBBY ======================= -->
+  <section id="screen-lobby" class="screen">
+    <h2>Lobby <span id="lobby-code" class="code-chip"></span></h2>
+    <div class="panel lobby">
+      <div class="players">
+        <div class="player-card" id="slot-0"><span class="pc-role">🟦 Hider</span><span class="pc-name">—</span><span class="pc-ready">…</span></div>
+        <div class="player-card" id="slot-1"><span class="pc-role">🟥 Seeker</span><span class="pc-name">—</span><span class="pc-ready">…</span></div>
+      </div>
+      <div class="invite hidden" id="invite-box">
+        <h3>📨 Invite a friend (same Wi-Fi)</h3>
+        <div class="row">
+          <input id="invite-link" readonly onclick="this.select()" />
+          <button class="btn btn-primary" data-action="copy-invite">📋 Copy</button>
+        </div>
+        <p class="hint">Send this link to a friend on your Wi-Fi — they click it and join instantly.</p>
+      </div>
+      <div class="map-vote">
+        <h3>Map</h3>
+        <div class="map-choices">
+          <button class="map-btn" data-map="school">🏫 School</button>
+          <button class="map-btn" data-map="factory">🏭 Factory</button>
+          <button class="map-btn" data-map="park">🌳 Park</button>
+        </div>
+      </div>
+      <div class="row">
+        <button class="btn" data-action="lobby-swap">🔁 Swap Roles</button>
+        <button class="btn btn-primary" data-action="lobby-ready">✔ READY</button>
+        <button class="btn" data-action="leave">Leave</button>
+      </div>
+      <p id="lobby-status" class="status"></p>
+    </div>
+  </section>
+
+  <!-- ======================= GAME ======================= -->
+  <section id="screen-game" class="screen">
+    <canvas id="game-canvas"></canvas>
+
+    <div id="hud-top">
+      <div id="score" class="hud-pill"><span class="s-hider">🟦 0</span> <span class="s-sep">·</span> <span class="s-seeker">0 🟥</span></div>
+      <div id="timer" class="hud-pill timer">4:00</div>
+      <div id="role-chip" class="hud-pill"></div>
+    </div>
+
+    <div id="radar-banner" class="radar-banner hidden">📡 HIDER DETECTED <span id="radar-dir"></span></div>
+
+    <div id="sound-hud"></div>
+    <div id="hotbar"></div>
+    <canvas id="minimap"></canvas>
+    <div id="toast" class="toast hidden"></div>
+  </section>
+
+  <!-- ======================= ROLE SELECT (solo) ======================= -->
+  <div id="screen-role" class="overlay hidden">
+    <div class="how-card">
+      <h2>Choose your role 🎭</h2>
+      <p class="build-note">The AI takes the other side.</p>
+      <label class="set-row" style="justify-content:center;gap:12px;margin-bottom:14px">Difficulty <select id="role-diff" class="select">
+        <option value="easy">😌 Easy</option>
+        <option value="normal">😎 Normal</option>
+        <option value="hard">😈 Hard</option>
+      </select></label>
+      <div class="row">
+        <button class="btn btn-primary" data-action="role-seeker">🟥 Play SEEKER</button>
+        <button class="btn btn-primary" data-action="role-hider">🟦 Play HIDER</button>
+      </div>
+      <button class="btn" data-action="close-overlay">Cancel</button>
+    </div>
+  </div>
+
+  <!-- ======================= COUNTDOWN ======================= -->
+  <div id="countdown" class="overlay hidden"><span id="countdown-num">3</span></div>
+
+  <!-- ======================= ROUND / MATCH END ======================= -->
+  <div id="screen-end" class="overlay hidden">
+    <div class="end-card">
+      <h2 id="end-title">Round over</h2>
+      <p id="end-sub"></p>
+      <div id="end-score" class="end-score"></div>
+      <div class="row">
+        <button class="btn btn-primary" data-action="rematch">Next Round ▶</button>
+        <button class="btn" data-action="to-menu">Main Menu</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================= HOW TO PLAY ======================= -->
+  <div id="screen-how" class="overlay hidden">
+    <div class="how-card">
+      <h2>How to Play 🎭</h2>
+      <div class="how-grid">
+        <div>
+          <h3>🟦 Hider</h3>
+          <ul>
+            <li>Survive <b>4 minutes</b> without being caught.</li>
+            <li><b>WASD</b> move · <b>Mouse</b> face.</li>
+            <li><b>Q</b> Decoy (3/round) — a fake you that walks &amp; fools radar.</li>
+            <li><b>E</b> Invisibility (3s)</li>
+            <li><b>Shift</b> Dash</li>
+            <li><b>F</b> Noise Maker — fake footsteps elsewhere.</li>
+            <li><b>Space</b> Hide in a hiding spot (📦).</li>
+          </ul>
+        </div>
+        <div>
+          <h3>🟥 Seeker</h3>
+          <ul>
+            <li>Catch the Hider before time runs out.</li>
+            <li>Map is <b>dark</b> — mouse aims a flashlight cone.</li>
+            <li><b>Radar pings every 30s</b> (direction only).</li>
+            <li><b>Shift</b> Sprint (3s)</li>
+            <li><b>Q</b> Tracker — reveal recent footsteps.</li>
+            <li><b>F</b> Flash Pulse — light a big area.</li>
+            <li><b>E</b> near target to Catch. Decoys slow you!</li>
+          </ul>
+        </div>
+      </div>
+      <button class="btn btn-primary" data-action="close-overlay">Got it</button>
+    </div>
+  </div>
+
+  <!-- ======================= SETTINGS ======================= -->
+  <div id="screen-settings" class="overlay hidden">
+    <div class="how-card">
+      <h2>Settings ⚙</h2>
+      <label class="set-row">Master volume <input id="set-vol" type="range" min="0" max="100" value="60" /></label>
+      <label class="set-row">Screen shake <input id="set-shake" type="checkbox" checked /></label>
+      <label class="set-row">High-quality lighting <input id="set-light" type="checkbox" checked /></label>
+      <label class="set-row">Difficulty <select id="set-diff" class="select">
+        <option value="easy">😌 Easy</option>
+        <option value="normal">😎 Normal</option>
+        <option value="hard">😈 Hard</option>
+      </select></label>
+      <button class="btn btn-primary" data-action="close-overlay">Done</button>
+    </div>
+  </div>
+
+</div>
+<script>
+/* ============================================================================
+   DECOY — game.js
+   2D top-down hide-and-seek. Single-player (vs AI) runs fully client-side.
+   Multiplayer uses the WebSocket thin-client protocol defined in server.js.
+   ========================================================================== */
+'use strict';
+
+/* --------------------------- CONFIG --------------------------- */
+const CFG = {
+  PLAYER_R: 13,
+  SPEED: 150,            // px/s base
+  SPRINT_MULT: 1.75,
+  DASH_SPEED: 430,
+  DASH_TIME: 0.18,
+  ROUND_TIME: 240,       // 4 minutes
+  WINS_NEEDED: 3,
+  CATCH_DIST: 28,
+  RADAR_INTERVAL: 30,    // s
+  SEEKER_VIEW: 95,       // base visibility radius (px)
+  FLASH_RANGE: 360,
+  FLASH_HALF_ANGLE: Math.PI / 6,  // 60 deg cone (±30)
+  DECOYS_PER_ROUND: 3,
+  FOOTSTEP_EVERY: 0.26,
+  FOOTSTEP_LIFE: 6,
+};
+
+/* Ability bar per role */
+const ABILITIES = {
+  seeker: [
+    {id:'sprint',  key:'SHIFT', icon:'⚡', cd:9,  dur:3, label:'Sprint'},
+    {id:'tracker', key:'Q',     icon:'👣', cd:14, dur:5, label:'Tracker'},
+    {id:'flash',   key:'F',     icon:'💥', cd:16, dur:0, label:'Flash'},
+    {id:'catch',   key:'E',     icon:'🤏', cd:0,  dur:0, label:'Catch'},
+  ],
+  hider: [
+    {id:'decoy',   key:'Q',     icon:'🎭', cd:3,  dur:0, label:'Decoy'},
+    {id:'invis',   key:'E',     icon:'👻', cd:12, dur:3, label:'Invisible'},
+    {id:'dash',    key:'SHIFT', icon:'💨', cd:5,  dur:0, label:'Dash'},
+    {id:'noise',   key:'F',     icon:'🪤', cd:8,  dur:0, label:'Noise'},
+    {id:'hide',    key:'SPACE', icon:'📦', cd:0,  dur:0, label:'Hide'},
+  ],
+};
+
+/* --------------------------- DIFFICULTY ---------------------------
+   One knob the player can set. Every value makes the AI weaker and the
+   human stronger as you go toward 'easy'. Radar/decoys/catch are applied
+   per-role so they always help whichever side the human is playing.      */
+const DIFF = {
+  easy:   { label:'😌 Easy',   aiMove:0.60, aiSee:300, aiAbilMul:1.9,  viewMul:1.50, flashMul:1.30, catchMul:1.45, aiCatchMul:0.85, radarSelf:14, radarAI:46, radarErr:0.30, decoys:5, aiDecoys:2 },
+  normal: { label:'😎 Normal', aiMove:0.85, aiSee:420, aiAbilMul:1.0,  viewMul:1.00, flashMul:1.00, catchMul:1.00, aiCatchMul:1.00, radarSelf:30, radarAI:30, radarErr:0.60, decoys:3, aiDecoys:3 },
+  hard:   { label:'😈 Hard',   aiMove:1.00, aiSee:540, aiAbilMul:0.65, viewMul:0.85, flashMul:0.90, catchMul:0.95, aiCatchMul:1.10, radarSelf:40, radarAI:20, radarErr:0.80, decoys:2, aiDecoys:3 },
+};
+function diff(){ return DIFF[G.settings.difficulty] || DIFF.easy; }
+function soloDiff(){ return G.mode==='solo'; } // difficulty tuning is vs-AI only; PvP stays fair
+function seekerViewR(){ return CFG.SEEKER_VIEW * (soloDiff()&&G.myRole==='seeker'?diff().viewMul:1); }
+function flashRange(){ return CFG.FLASH_RANGE * (soloDiff()&&G.myRole==='seeker'?diff().flashMul:1); }
+function catchDist(){ if(!soloDiff())return CFG.CATCH_DIST; return CFG.CATCH_DIST * (G.myRole==='seeker'?diff().catchMul:diff().aiCatchMul); }
+function radarInterval(){ if(!soloDiff())return CFG.RADAR_INTERVAL; return G.myRole==='seeker'?diff().radarSelf:diff().radarAI; }
+function decoyCount(){ if(!soloDiff())return CFG.DECOYS_PER_ROUND; return G.myRole==='hider'?diff().decoys:diff().aiDecoys; }
+
+/* --------------------------- MAPS --------------------------- */
+function border(w,h,t){return [
+  {x:0,y:0,w:w,h:t},{x:0,y:h-t,w:w,h:t},{x:0,y:0,w:t,h:h},{x:w-t,y:0,w:t,h:h}];}
+
+const MAPS = {
+  school: (()=>{const w=2200,h=1500,t=22;return{
+    name:'School', emoji:'🏫', w,h, bg:'#141a2e', wallColor:'#39507e', accent:'#4aa3ff',
+    walls:[...border(w,h,t),
+      {x:120,y:120,w:420,h:22},{x:120,y:458,w:150,h:22},{x:390,y:458,w:150,h:22},{x:120,y:142,w:22,h:316},{x:518,y:142,w:22,h:316},{x:660,y:120,w:420,h:22},{x:660,y:458,w:150,h:22},{x:930,y:458,w:150,h:22},{x:660,y:142,w:22,h:316},{x:1058,y:142,w:22,h:316},{x:1200,y:120,w:420,h:22},{x:1200,y:458,w:150,h:22},{x:1470,y:458,w:150,h:22},{x:1200,y:142,w:22,h:316},{x:1598,y:142,w:22,h:316},{x:1740,y:120,w:420,h:22},{x:1740,y:458,w:150,h:22},{x:2010,y:458,w:150,h:22},{x:1740,y:142,w:22,h:316},{x:2138,y:142,w:22,h:316},{x:320,y:560,w:40,h:120},{x:860,y:560,w:40,h:120},{x:1400,y:560,w:40,h:120},{x:1940,y:560,w:40,h:120},{x:120,y:760,w:430,h:22},{x:670,y:760,w:430,h:22},{x:120,y:1298,w:980,h:22},{x:120,y:782,w:22,h:516},{x:1078,y:782,w:22,h:198},{x:1078,y:1100,w:22,h:198},{x:220,y:860,w:520,h:26},{x:220,y:980,w:520,h:26},{x:220,y:1100,w:520,h:26},{x:220,y:1220,w:520,h:26},{x:1220,y:760,w:370,h:22},{x:1710,y:760,w:370,h:22},{x:1220,y:1298,w:860,h:22},{x:1220,y:782,w:22,h:198},{x:1220,y:1100,w:22,h:198},{x:2058,y:782,w:22,h:516}],
+    hides:[{x:160,y:160,w:80,h:80},{x:700,y:160,w:80,h:80},{x:1240,y:160,w:80,h:80},{x:1780,y:160,w:80,h:80},{x:760,y:860,w:70,h:120},{x:760,y:1120,w:70,h:120},{x:1960,y:1200,w:90,h:90},{x:1300,y:1200,w:90,h:90}],
+    doors:[{x:270,y:458,w:120,h:22,open:true},{x:810,y:458,w:120,h:22,open:false},{x:1350,y:458,w:120,h:22,open:true},{x:1890,y:458,w:120,h:22,open:false},{x:550,y:760,w:120,h:22,open:false}],
+    seekerSpawn:{x:1650,y:1040}, hiderSpawn:{x:330,y:300} };})(),
+  factory: (()=>{const w=2400,h=1600,t=22;return{
+    name:'Factory', emoji:'🏭', w,h, bg:'#1a1510', wallColor:'#7a5a2e', accent:'#ffd34a',
+    walls:[...border(w,h,t),
+      {x:360,y:300,w:240,h:220},{x:360,y:730,w:240,h:220},{x:360,y:1160,w:240,h:220},{x:980,y:300,w:240,h:220},{x:980,y:730,w:240,h:220},{x:980,y:1160,w:240,h:220},{x:1600,y:300,w:240,h:220},{x:1600,y:730,w:240,h:220},{x:1600,y:1160,w:240,h:220},{x:2080,y:260,w:30,h:900},{x:2240,y:260,w:30,h:900},{x:300,y:1360,w:40,h:160},{x:620,y:1240,w:40,h:160},{x:940,y:1360,w:40,h:160},{x:1260,y:1240,w:40,h:160},{x:1580,y:1360,w:40,h:160},{x:1900,y:1240,w:40,h:160}],
+    hides:[{x:620,y:370,w:80,h:80},{x:620,y:800,w:80,h:80},{x:620,y:1230,w:80,h:80},{x:1240,y:370,w:80,h:80},{x:1240,y:800,w:80,h:80},{x:1240,y:1230,w:80,h:80},{x:260,y:1420,w:90,h:90},{x:2260,y:1420,w:90,h:90}],
+    doors:[{x:2080,y:700,w:30,h:120,open:true}],
+    seekerSpawn:{x:2200,y:1420}, hiderSpawn:{x:200,y:200} };})(),
+  park: (()=>{const w=2200,h=1600,t=22;return{
+    name:'Park', emoji:'🌳', w,h, bg:'#0f2016', wallColor:'#2f7d4f', accent:'#44d07b',
+    walls:[...border(w,h,t),
+      {x:500,y:300,w:26,h:700},{x:500,y:300,w:500,h:26},{x:1000,y:300,w:26,h:460},{x:700,y:480,w:26,h:520},{x:700,y:980,w:600,h:26},{x:1280,y:480,w:26,h:520},{x:1060,y:480,w:240,h:26},{x:260,y:260,w:70,h:70},{x:300,y:1250,w:70,h:70},{x:1900,y:300,w:70,h:70},{x:1950,y:1250,w:70,h:70},{x:1100,y:1300,w:70,h:70},{x:180,y:760,w:70,h:70},{x:2000,y:760,w:70,h:70},{x:1620,y:260,w:360,h:240},{x:820,y:1180,w:220,h:22},{x:1160,y:1180,w:220,h:22},{x:820,y:1458,w:560,h:22},{x:820,y:1202,w:22,h:256},{x:1358,y:1202,w:22,h:256}],
+    hides:[{x:250,y:250,w:90,h:90},{x:290,y:1240,w:90,h:90},{x:1890,y:290,w:90,h:90},{x:1940,y:1240,w:90,h:90},{x:1090,y:1290,w:90,h:90},{x:170,y:750,w:90,h:90},{x:1990,y:750,w:90,h:90},{x:1060,y:1320,w:80,h:80}],
+    doors:[{x:1040,y:1180,w:120,h:22,open:true}],
+    seekerSpawn:{x:2000,y:1400}, hiderSpawn:{x:200,y:200} };})(),
+};
+
+/* --------------------------- GEOMETRY --------------------------- */
+function clamp(v,a,b){return v<a?a:v>b?b:v;}
+function dist(ax,ay,bx,by){return Math.hypot(ax-bx,ay-by);}
+function angleOf(dx,dy){return Math.atan2(dy,dx);}
+function angDiff(a,b){let d=a-b;while(d>Math.PI)d-=2*Math.PI;while(d<-Math.PI)d+=2*Math.PI;return d;}
+
+function collideRect(x,y,r,rc){
+  const cx=clamp(x,rc.x,rc.x+rc.w), cy=clamp(y,rc.y,rc.y+rc.h);
+  const dx=x-cx, dy=y-cy, d2=dx*dx+dy*dy;
+  if(d2>r*r){
+    if(x>rc.x&&x<rc.x+rc.w&&y>rc.y&&y<rc.y+rc.h){
+      const left=x-rc.x,right=rc.x+rc.w-x,top=y-rc.y,bot=rc.y+rc.h-y;
+      const m=Math.min(left,right,top,bot);
+      if(m===left)return{x:rc.x-r,y};if(m===right)return{x:rc.x+rc.w+r,y};
+      if(m===top)return{x,y:rc.y-r};return{x,y:rc.y+rc.h+r};
+    }
+    return null;
+  }
+  const d=Math.sqrt(d2)||0.0001, pen=r-d;
+  if(d2===0) return {x:x,y:rc.y-r};
+  return {x:x+dx/d*pen, y:y+dy/d*pen};
+}
+function segSeg(ax,ay,bx,by,cx,cy,dx,dy){
+  const rpx=bx-ax,rpy=by-ay,spx=dx-cx,spy=dy-cy;
+  const denom=rpx*spy-rpy*spx; if(denom===0)return null;
+  const t=((cx-ax)*spy-(cy-ay)*spx)/denom;
+  const u=((cx-ax)*rpy-(cy-ay)*rpx)/denom;
+  return (t>=0&&t<=1&&u>=0&&u<=1)?t:null;
+}
+function raySegRect(ox,oy,dx,dy,rc){
+  let hit=1;
+  const E=[[rc.x,rc.y,rc.x+rc.w,rc.y],[rc.x,rc.y+rc.h,rc.x+rc.w,rc.y+rc.h],
+    [rc.x,rc.y,rc.x,rc.y+rc.h],[rc.x+rc.w,rc.y,rc.x+rc.w,rc.y+rc.h]];
+  for(const[x1,y1,x2,y2]of E){const t=segSeg(ox,oy,ox+dx,oy+dy,x1,y1,x2,y2);if(t!==null&&t<hit)hit=t;}
+  return hit;
+}
+function activeWalls(map){
+  const w=map.walls.slice();
+  for(const d of map.doors) if(!d.open) w.push(d);
+  return w;
+}
+function lineClear(x1,y1,x2,y2,walls){
+  const dx=x2-x1,dy=y2-y1;
+  for(const w of walls) if(raySegRect(x1,y1,dx,dy,w)<0.999) return false;
+  return true;
+}
+
+/* --------------------------- GAME STATE --------------------------- */
+const G = {
+  mode:'solo', mapKey:'school', map:null, myRole:'seeker',
+  running:false, time:CFG.ROUND_TIME, score:{hider:0,seeker:0},
+  players:{hider:null,seeker:null},
+  decoys:[], footsteps:[], sounds:[],
+  radarT:CFG.RADAR_INTERVAL, radarDir:null, radarShow:0,
+  cd:{seeker:{},hider:{}}, dur:{seeker:{},hider:{}},
+  decoysLeft:CFG.DECOYS_PER_ROUND, seekerSlow:0, shake:0,
+  settings:{vol:.6, shake:true, light:true, fps:false, difficulty:'easy'},
+  net:null, fps:0,
+};
+
+function mkPlayer(role,spawn){return {role,x:spawn.x,y:spawn.y,angle:0,footT:0,hiding:false,invis:0};}
+
+function resetRound(){
+  const m=MAPS[G.mapKey]; G.map=m;
+  G.players.hider=mkPlayer('hider',m.hiderSpawn);
+  G.players.seeker=mkPlayer('seeker',m.seekerSpawn);
+  G.decoys=[];G.footsteps=[];G.sounds=[];
+  G.time=CFG.ROUND_TIME;
+  G.radarT=radarInterval();G.radarShow=0;G.radarDir=null;
+  G.cd={seeker:{},hider:{}};G.dur={seeker:{},hider:{}};
+  G.decoysLeft=decoyCount();G.seekerSlow=0;G.shake=0;
+  AI.reset();
+}
+
+/* --------------------------- SOUND EVENTS --------------------------- */
+function emitSound(x,y,icon,life,owner){
+  // owner = role that produced the sound ('seeker'/'hider'), or null for neutral
+  // world events (radar/doors). The sound HUD hides sounds you make yourself.
+  G.sounds.push({x,y,icon,life:life||1.4,t:life||1.4,owner:owner||null});
+  if(G.sounds.length>40) G.sounds.shift();
+  SFX.play(icon);
+}
+
+/* --------------------------- ABILITIES --------------------------- */
+function abilityReady(role,id){return (G.cd[role][id]||0)<=0;}
+function triggerCD(role,id){const a=ABILITIES[role].find(a=>a.id===id);if(a&&a.cd)G.cd[role][id]=a.cd;}
+
+function useAbility(role,id){
+  if(!abilityReady(role,id)) return false;
+  const p=G.players[role];
+  switch(id){
+    case 'sprint': G.dur.seeker.sprint=3; triggerCD('seeker','sprint'); emitSound(p.x,p.y,'💨',1.4,'seeker'); break;
+    case 'tracker': G.dur.seeker.tracker=5; triggerCD('seeker','tracker'); showToast('👣 Tracker'); break;
+    case 'flash': G.dur.seeker.flash=0.4; triggerCD('seeker','flash'); emitSound(p.x,p.y,'💥',1.4,'seeker'); G.shake=.5; break;
+    case 'catch': return tryCatch();
+    case 'decoy':
+      if(G.decoysLeft<=0){showToast('No decoys left');return false;}
+      G.decoysLeft--; triggerCD('hider','decoy'); G.decoys.push(mkDecoy(p)); emitSound(p.x,p.y,'🎭',1.4,'hider'); break;
+    case 'invis': p.invis=3; G.dur.hider.invis=3; triggerCD('hider','invis'); showToast('👻 Invisible'); break;
+    case 'dash': G.dur.hider.dash=CFG.DASH_TIME; triggerCD('hider','dash'); emitSound(p.x,p.y,'💨',1.4,'hider'); break;
+    case 'noise':{
+      const a=Math.random()*Math.PI*2, r=150+Math.random()*150;
+      const nx=clamp(p.x+Math.cos(a)*r,30,G.map.w-30), ny=clamp(p.y+Math.sin(a)*r,30,G.map.h-30);
+      emitSound(nx,ny,'👣',2.4,'hider');
+      for(let i=0;i<5;i++) G.footsteps.push({x:nx+i*8,y:ny,life:CFG.FOOTSTEP_LIFE,role:'hider',fake:true});
+      triggerCD('hider','noise'); break;
+    }
+    case 'hide': toggleHide(p); break;
+    default:return false;
+  }
+  return true;
+}
+
+function toggleHide(p){
+  if(p.hiding){p.hiding=false;showToast('Revealed');return;}
+  for(const h of G.map.hides)
+    if(p.x>h.x-12&&p.x<h.x+h.w+12&&p.y>h.y-12&&p.y<h.y+h.h+12){p.hiding=true;emitSound(p.x,p.y,'📦',1.4,'hider');showToast('📦 Hidden');return;}
+  showToast('No hiding spot here');
+}
+function mkDecoy(p){return {x:p.x,y:p.y,angle:p.angle,dir:Math.random()*Math.PI*2,footT:0,life:22,retarget:0};}
+
+function tryCatch(){
+  const s=G.players.seeker, h=G.players.hider;
+  let ci=-1,cd=1e9;
+  G.decoys.forEach((d,i)=>{const r=dist(s.x,s.y,d.x,d.y);if(r<catchDist()+6&&r<cd){cd=r;ci=i;}});
+  if(dist(s.x,s.y,h.x,h.y)<catchDist() && !h.hiding){ endRound('seeker'); return true; }
+  if(ci>=0){ G.decoys.splice(ci,1); G.seekerSlow=1.4; G.shake=.6; showToast('Decoy! 🎭 Slowed'); emitSound(s.x,s.y,'💥',1.4,'seeker'); return true; }
+  showToast('Missed 🤏'); return false;
+}
+
+/* --------------------------- SIMULATION --------------------------- */
+function moveEntity(p,dvx,dvy,dt){
+  let nx=p.x+dvx*dt, ny=p.y+dvy*dt;
+  const walls=activeWalls(G.map);
+  for(const w of walls){const c=collideRect(nx,p.y,CFG.PLAYER_R,w);if(c)nx=c.x;}
+  for(const w of walls){const c=collideRect(nx,ny,CFG.PLAYER_R,w);if(c)ny=c.y;}
+  p.x=clamp(nx,CFG.PLAYER_R,G.map.w-CFG.PLAYER_R);
+  p.y=clamp(ny,CFG.PLAYER_R,G.map.h-CFG.PLAYER_R);
+}
+function stepFootsteps(p,dt,moving,role){
+  if(!moving||p.hiding)return;
+  p.footT-=dt;
+  if(p.footT<=0){p.footT=CFG.FOOTSTEP_EVERY;
+    G.footsteps.push({x:p.x,y:p.y,life:CFG.FOOTSTEP_LIFE,role});
+    emitSound(p.x,p.y,'👣',1.0,role);}
+}
+function updateTimers(dt){
+  for(const role of ['seeker','hider']){
+    for(const k in G.cd[role]) if(G.cd[role][k]>0) G.cd[role][k]=Math.max(0,G.cd[role][k]-dt);
+    for(const k in G.dur[role]) if(G.dur[role][k]>0) G.dur[role][k]=Math.max(0,G.dur[role][k]-dt);
+  }
+  const h=G.players.hider; if(h.invis>0)h.invis=Math.max(0,h.invis-dt);
+  if(G.seekerSlow>0)G.seekerSlow=Math.max(0,G.seekerSlow-dt);
+  if(G.shake>0)G.shake=Math.max(0,G.shake-dt*2);
+  G.footsteps=G.footsteps.filter(f=>(f.life-=dt)>0);
+  G.sounds=G.sounds.filter(s=>(s.t-=dt)>0);
+  G.radarT-=dt;
+  if(G.radarT<=0){G.radarT=radarInterval();
+    const s=G.players.seeker,h2=G.players.hider;
+    G.radarDir=angleOf(h2.x-s.x,h2.y-s.y)+(Math.random()-.5)*diff().radarErr;
+    G.radarShow=4; emitSound(s.x,s.y,'📡',1.6);}
+  if(G.radarShow>0)G.radarShow=Math.max(0,G.radarShow-dt);
+}
+function updateDecoys(dt){
+  const walls=activeWalls(G.map);
+  for(let i=G.decoys.length-1;i>=0;i--){
+    const d=G.decoys[i]; d.life-=dt;
+    if(d.life<=0){G.decoys.splice(i,1);continue;}
+    d.retarget-=dt;
+    if(d.retarget<=0){d.retarget=1.2+Math.random()*1.5;d.dir+=(Math.random()-.5)*1.4;}
+    const sp=CFG.SPEED*0.8;
+    let nx=d.x+Math.cos(d.dir)*sp*dt, ny=d.y+Math.sin(d.dir)*sp*dt;
+    let blocked=false;
+    for(const w of walls){if(collideRect(nx,ny,CFG.PLAYER_R,w)){blocked=true;break;}}
+    if(blocked||nx<24||nx>G.map.w-24||ny<24||ny>G.map.h-24){d.dir+=Math.PI*(0.5+Math.random());}
+    else{d.x=nx;d.y=ny;d.angle=d.dir;}
+    d.footT-=dt;
+    if(d.footT<=0){d.footT=CFG.FOOTSTEP_EVERY;G.footsteps.push({x:d.x,y:d.y,life:CFG.FOOTSTEP_LIFE,role:'hider',decoy:true});emitSound(d.x,d.y,'👣',0.9,'hider');}
+  }
+}
+
+/* --------------------------- INPUT --------------------------- */
+const Input = {
+  keys:{}, mx:0, my:0, down:false,
+  init(canvas){
+    window.addEventListener('keydown',e=>{
+      const k=e.key.toLowerCase(); this.keys[k]=true;
+      if([' ','shift'].includes(k)||['w','a','s','d','q','e','f'].includes(k)) e.preventDefault();
+      if(G.running && G.mode==='solo'){
+        const role=G.myRole;
+        if(k==='q') tapAbility(role, role==='hider'?'decoy':'tracker');
+        else if(k==='e') tapAbility(role, role==='hider'?'invis':'catch');
+        else if(k==='f') tapAbility(role, role==='hider'?'noise':'flash');
+        else if(k===' ') { if(role==='hider') tapAbility('hider','hide'); }
+      }
+    });
+    window.addEventListener('keyup',e=>{this.keys[e.key.toLowerCase()]=false;});
+    canvas.addEventListener('mousemove',e=>{const r=canvas.getBoundingClientRect();this.mx=e.clientX-r.left;this.my=e.clientY-r.top;});
+    canvas.addEventListener('mousedown',()=>{this.down=true;});
+    window.addEventListener('mouseup',()=>{this.down=false;});
+    window.addEventListener('blur',()=>{this.keys={};});
+  },
+  held(k){return !!this.keys[k];}
+};
+function tapAbility(role,id){
+  if(G.mode==='net'){ G.net && G.net.sendAbility(id); return; }
+  useAbility(role,id);
+}
+
+/* --------------------------- LOCAL PLAYER CONTROL --------------------------- */
+function controlLocal(dt){
+  const role=G.myRole, p=G.players[role];
+  let dx=0,dy=0;
+  if(Input.held('w'))dy--; if(Input.held('s'))dy++; if(Input.held('a'))dx--; if(Input.held('d'))dx++;
+  const moving=dx||dy;
+  let speed=CFG.SPEED;
+  if(role==='seeker'&&G.dur.seeker.sprint>0)speed*=CFG.SPRINT_MULT;
+  if(role==='seeker'&&G.seekerSlow>0)speed*=0.45;
+  if(role==='hider'&&G.dur.hider.dash>0)speed=CFG.DASH_SPEED;
+  // sprint/dash via SHIFT (continuous trigger)
+  if(Input.held('shift')){
+    if(role==='seeker'&&G.dur.seeker.sprint<=0&&abilityReady('seeker','sprint')) tapAbility('seeker','sprint');
+    if(role==='hider'&&G.dur.hider.dash<=0&&abilityReady('hider','dash')) tapAbility('hider','dash');
+  }
+  if(moving){
+    const L=Math.hypot(dx,dy); dx/=L;dy/=L;
+    if(p.hiding)p.hiding=false;
+    moveEntity(p,dx*speed,dy*speed,dt);
+  }
+  // aim toward mouse (world coords)
+  const wx=Cam.x+Input.mx, wy=Cam.y+Input.my;
+  p.angle=angleOf(wx-p.x,wy-p.y);
+  stepFootsteps(p,dt,moving,role);
+}
+
+/* --------------------------- AI OPPONENT --------------------------- */
+const AI = {
+  role:'hider', dir:0, retarget:0, lastSeen:null, panic:0, abilT:0,
+  reset(){ this.role = G.myRole==='seeker'?'hider':'seeker'; this.dir=Math.random()*6.28; this.retarget=0; this.lastSeen=null; this.panic=0; this.abilT=2; },
+  update(dt){
+    if(G.mode!=='solo')return;
+    const me=G.players[this.role], foe=G.players[this.role==='hider'?'seeker':'hider'];
+    const walls=activeWalls(G.map);
+    const canSee=lineClear(me.x,me.y,foe.x,foe.y,walls) && dist(me.x,me.y,foe.x,foe.y)<diff().aiSee;
+    this.abilT-=dt/diff().aiAbilMul;
+    if(this.role==='seeker') this.seekerAI(dt,me,foe,walls,canSee);
+    else this.hiderAI(dt,me,foe,walls,canSee);
+  },
+  wander(dt,me,walls){
+    this.retarget-=dt;
+    if(this.retarget<=0){this.retarget=1+Math.random()*1.6;this.dir+=(Math.random()-.5)*1.8;}
+    const sp=CFG.SPEED*diff().aiMove;
+    let nx=me.x+Math.cos(this.dir)*sp*dt, ny=me.y+Math.sin(this.dir)*sp*dt;
+    let blocked=false; for(const w of walls)if(collideRect(nx,ny,CFG.PLAYER_R,w)){blocked=true;break;}
+    if(blocked||nx<30||nx>G.map.w-30||ny<30||ny>G.map.h-30){this.dir+=Math.PI*(0.5+Math.random());me.angle=this.dir;}
+    else moveEntity(me,Math.cos(this.dir)*sp,Math.sin(this.dir)*sp,dt);
+  },
+  goToward(dt,me,tx,ty,mult,walls){
+    let a=angleOf(tx-me.x,ty-me.y);
+    // simple obstacle avoidance: if blocked ahead, fan out
+    const sp=CFG.SPEED*mult*diff().aiMove;
+    for(const off of [0,0.5,-0.5,1,-1,1.6,-1.6]){
+      const aa=a+off, nx=me.x+Math.cos(aa)*20, ny=me.y+Math.sin(aa)*20;
+      let ok=true; for(const w of walls)if(collideRect(nx,ny,CFG.PLAYER_R,w)){ok=false;break;}
+      if(ok){ me.angle=aa; moveEntity(me,Math.cos(aa)*sp,Math.sin(aa)*sp,dt);
+        stepFootsteps(me,dt,true,this.role); return; }
+    }
+  },
+  seekerAI(dt,me,foe,walls,canSee){
+    let target=null;
+    if(canSee && foe.invis<=0 && !foe.hiding){ this.lastSeen={x:foe.x,y:foe.y}; target=foe; }
+    else if(G.radarShow>0 && G.radarDir!=null){ target={x:me.x+Math.cos(G.radarDir)*260,y:me.y+Math.sin(G.radarDir)*260}; }
+    else if(this.lastSeen){ target=this.lastSeen; if(dist(me.x,me.y,target.x,target.y)<30)this.lastSeen=null; }
+    if(target){
+      const mult = (G.dur.seeker.sprint>0?CFG.SPRINT_MULT:1)*(G.seekerSlow>0?0.45:1);
+      this.goToward(dt,me,target.x,target.y,mult,walls);
+      if(canSee && dist(me.x,me.y,foe.x,foe.y)<catchDist()+4 && foe.invis<=0 && !foe.hiding) tryCatch();
+      if(this.abilT<=0 && abilityReady('seeker','sprint') && dist(me.x,me.y,foe.x,foe.y)<300){useAbility('seeker','sprint');this.abilT=10;}
+    } else { this.wander(dt,me,walls); if(this.abilT<=0&&abilityReady('seeker','flash')){useAbility('seeker','flash');this.abilT=17;} }
+  },
+  hiderAI(dt,me,foe,walls,seesSeeker){
+    const d=dist(me.x,me.y,foe.x,foe.y);
+    if(seesSeeker && d<300){
+      this.panic=1.5;
+      // flee away from seeker
+      const away=angleOf(me.x-foe.x,me.y-foe.y);
+      this.goToward(dt,me,me.x+Math.cos(away)*200,me.y+Math.sin(away)*200,1,walls);
+      if(this.abilT<=0){
+        if(abilityReady('hider','decoy')&&G.decoysLeft>0){useAbility('hider','decoy');this.abilT=4;}
+        else if(abilityReady('hider','invis')){useAbility('hider','invis');this.abilT=13;}
+        else if(abilityReady('hider','dash')){useAbility('hider','dash');this.abilT=6;}
+      }
+    } else {
+      this.panic-=dt;
+      this.wander(dt,me,walls);
+      if(this.abilT<=0&&abilityReady('hider','noise')&&Math.random()<0.5){useAbility('hider','noise');this.abilT=9;}
+    }
+  }
+};
+
+/* --------------------------- CAMERA --------------------------- */
+const Cam = {x:0,y:0,w:0,h:0,
+  follow(p,dt){
+    const tx=p.x-this.w/2, ty=p.y-this.h/2;
+    this.x+=(clamp(tx,0,Math.max(0,G.map.w-this.w))-this.x)*Math.min(1,dt*8);
+    this.y+=(clamp(ty,0,Math.max(0,G.map.h-this.h))-this.y)*Math.min(1,dt*8);
+    if(G.shake>0&&G.settings.shake){this.x+=(Math.random()-.5)*G.shake*14;this.y+=(Math.random()-.5)*G.shake*14;}
+  }};
+
+/* --------------------------- RENDER --------------------------- */
+let canvas, ctx, mini, mctx;
+function initCanvas(){
+  canvas=document.getElementById('game-canvas'); ctx=canvas.getContext('2d');
+  mini=document.getElementById('minimap'); mctx=mini.getContext('2d');
+  resize(); window.addEventListener('resize',resize);
+}
+function resize(){
+  canvas.width=innerWidth; canvas.height=innerHeight;
+  Cam.w=innerWidth; Cam.h=innerHeight;
+  mini.width=180; mini.height=180;
+}
+
+function drawRoom(){
+  const m=G.map;
+  ctx.fillStyle=m.bg; ctx.fillRect(-Cam.x,-Cam.y,m.w,m.h);
+  // floor grid
+  ctx.strokeStyle='rgba(255,255,255,0.03)'; ctx.lineWidth=1;
+  for(let x=0;x<=m.w;x+=80){ctx.beginPath();ctx.moveTo(x-Cam.x,-Cam.y);ctx.lineTo(x-Cam.x,m.h-Cam.y);ctx.stroke();}
+  for(let y=0;y<=m.h;y+=80){ctx.beginPath();ctx.moveTo(-Cam.x,y-Cam.y);ctx.lineTo(m.w-Cam.x,y-Cam.y);ctx.stroke();}
+  // hiding spots
+  for(const h of m.hides){ctx.fillStyle='rgba(68,208,123,0.14)';ctx.strokeStyle='rgba(68,208,123,0.5)';
+    roundRect(h.x-Cam.x,h.y-Cam.y,h.w,h.h,8);ctx.fill();ctx.stroke();
+    ctx.font='22px serif';ctx.textAlign='center';ctx.fillText('📦',h.x+h.w/2-Cam.x,h.y+h.h/2+8-Cam.y);}
+  // doors
+  for(const d of m.doors){ctx.fillStyle=d.open?'rgba(120,90,40,0.25)':m.wallColor;
+    roundRect(d.x-Cam.x,d.y-Cam.y,d.w,d.h,3);ctx.fill();}
+  // walls
+  ctx.fillStyle=m.wallColor;
+  for(const w of m.walls){roundRect(w.x-Cam.x,w.y-Cam.y,w.w,w.h,4);ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.06)';ctx.fillRect(w.x-Cam.x,w.y-Cam.y,w.w,3);ctx.fillStyle=m.wallColor;}
+}
+function roundRect(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+
+function drawSquare(x,y,angle,color,alpha,label){
+  ctx.save(); ctx.globalAlpha=alpha; ctx.translate(x-Cam.x,y-Cam.y);
+  const r=CFG.PLAYER_R;
+  // body
+  ctx.fillStyle=color; ctx.strokeStyle='rgba(0,0,0,0.4)'; ctx.lineWidth=2;
+  roundRect(-r,-r,r*2,r*2,5); ctx.fill(); ctx.stroke();
+  // eyes (face mouse/angle)
+  ctx.rotate(angle);
+  ctx.fillStyle='#fff';
+  ctx.beginPath();ctx.arc(3,-5,3.2,0,6.28);ctx.arc(3,5,3.2,0,6.28);ctx.fill();
+  const blink=(Math.sin(performance.now()/1000*2+x)>0.96);
+  if(!blink){ctx.fillStyle='#10131f';ctx.beginPath();ctx.arc(5,-5,1.6,0,6.28);ctx.arc(5,5,1.6,0,6.28);ctx.fill();}
+  ctx.restore();
+  if(label){ctx.fillStyle='rgba(255,255,255,0.8)';ctx.font='11px sans-serif';ctx.textAlign='center';ctx.fillText(label,x-Cam.x,y-r-6-Cam.y);}
+}
+
+/* compute flashlight cone polygon with wall occlusion */
+function conePolygon(ox,oy,aim){
+  const walls=activeWalls(G.map), pts=[];
+  const N=42, half=CFG.FLASH_HALF_ANGLE, R=flashRange();
+  for(let i=0;i<=N;i++){
+    const a=aim-half+(2*half)*(i/N);
+    const dx=Math.cos(a)*R, dy=Math.sin(a)*R;
+    let t=1; for(const w of walls){const h=raySegRect(ox,oy,dx,dy,w);if(h<t)t=h;}
+    pts.push([ox+dx*t,oy+dy*t]);
+  }
+  return pts;
+}
+function visibleRadiusPoly(ox,oy,R){
+  const walls=activeWalls(G.map),pts=[],N=48;
+  for(let i=0;i<=N;i++){const a=(i/N)*6.283;const dx=Math.cos(a)*R,dy=Math.sin(a)*R;
+    let t=1;for(const w of walls){const h=raySegRect(ox,oy,dx,dy,w);if(h<t)t=h;}
+    pts.push([ox+dx*t,oy+dy*t]);}
+  return pts;
+}
+
+function render(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  drawRoom();
+
+  const seeker=G.players.seeker, hider=G.players.hider;
+  const iAmSeeker = G.myRole==='seeker';
+
+  // footsteps (visible to hider always; to seeker only with tracker or if within light)
+  for(const f of G.footsteps){
+    const vis = !iAmSeeker || G.dur.seeker.tracker>0;
+    if(!vis) continue;
+    const a=clamp(f.life/CFG.FOOTSTEP_LIFE,0,1)*0.5;
+    ctx.fillStyle=f.decoy||f.fake?`rgba(255,211,74,${a})`:`rgba(170,190,255,${a})`;
+    ctx.beginPath();ctx.arc(f.x-Cam.x,f.y-Cam.y,3,0,6.28);ctx.fill();
+  }
+
+  if(iAmSeeker){
+    // ---- SEEKER view: darkness + small radius + flashlight cone ----
+    renderSeekerView(seeker,hider);
+  } else {
+    // ---- HIDER view: sees everything ----
+    for(const d of G.decoys) drawSquare(d.x,d.y,d.angle,'#6fc0ff',0.85,'you?');
+    drawSquare(seeker.x,seeker.y,seeker.angle,'#ff5a6a',1,'Seeker');
+    drawSquare(hider.x,hider.y,hider.angle,'#4aa3ff',hider.invis>0?0.4:1,'You');
+    // show seeker flashlight faintly so hider can plan
+    drawConeOverlay(seeker.x,seeker.y,seeker.angle,'rgba(255,230,160,0.10)');
+  }
+
+  drawMinimap();
+}
+
+function drawConeOverlay(ox,oy,aim,fill){
+  const poly=conePolygon(ox,oy,aim);
+  ctx.save();ctx.fillStyle=fill;ctx.beginPath();ctx.moveTo(ox-Cam.x,oy-Cam.y);
+  for(const[px,py]of poly)ctx.lineTo(px-Cam.x,py-Cam.y);ctx.closePath();ctx.fill();ctx.restore();
+}
+
+function renderSeekerView(seeker,hider){
+  // Build a lightmask on the dark overlay using 'destination-out'
+  const dark=ctx;
+  // draw entities first (they'll be masked by darkness except where lit)
+  // We render: darkness overlay with holes punched for visible radius + cone + flash.
+  // 1) punch visibility into an offscreen alpha then composite. Simpler: draw dark rect, then lit polys with lighter.
+  ctx.save();
+  // Dark overlay
+  ctx.fillStyle='rgba(2,4,10,0.93)';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  // Punch holes (reveal) with destination-out
+  ctx.globalCompositeOperation='destination-out';
+  // small circle around seeker
+  const vr=seekerViewR();
+  const rp=visibleRadiusPoly(seeker.x,seeker.y,vr);
+  fillPolyGrad(seeker.x,seeker.y,vr,rp);
+  // flashlight cone
+  const cone=conePolygon(seeker.x,seeker.y,seeker.angle);
+  ctx.beginPath();ctx.moveTo(seeker.x-Cam.x,seeker.y-Cam.y);
+  for(const[px,py]of cone)ctx.lineTo(px-Cam.x,py-Cam.y);ctx.closePath();
+  const g=ctx.createRadialGradient(seeker.x-Cam.x,seeker.y-Cam.y,10,seeker.x-Cam.x,seeker.y-Cam.y,flashRange());
+  g.addColorStop(0,'rgba(0,0,0,1)');g.addColorStop(0.7,'rgba(0,0,0,0.9)');g.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=g;ctx.fill();
+  // flash pulse: big area
+  if(G.dur.seeker.flash>0){const fp=visibleRadiusPoly(seeker.x,seeker.y,300);fillPolyGrad(seeker.x,seeker.y,300,fp);}
+  ctx.restore();
+
+  // Now draw lit entities, but clip them to the lit regions so they only appear when visible.
+  ctx.save();
+  ctx.beginPath();
+  addPolyPath(cone,seeker.x,seeker.y);
+  addPolyPath(rp,seeker.x,seeker.y);
+  if(G.dur.seeker.flash>0) addPolyPath(visibleRadiusPoly(seeker.x,seeker.y,300),seeker.x,seeker.y);
+  ctx.clip();
+  for(const d of G.decoys) drawSquare(d.x,d.y,d.angle,'#6fc0ff',1,null);
+  if(hider.invis<=0 && !hider.hiding) drawSquare(hider.x,hider.y,hider.angle,'#4aa3ff',1,null);
+  ctx.restore();
+
+  // seeker always visible on top
+  drawSquare(seeker.x,seeker.y,seeker.angle,'#ff5a6a',1,'You');
+  // warm cone tint
+  drawConeOverlay(seeker.x,seeker.y,seeker.angle,'rgba(255,225,150,0.06)');
+}
+function addPolyPath(poly,ox,oy){ctx.moveTo(ox-Cam.x,oy-Cam.y);for(const[px,py]of poly)ctx.lineTo(px-Cam.x,py-Cam.y);ctx.closePath();}
+function fillPolyGrad(ox,oy,R,poly){
+  ctx.beginPath();ctx.moveTo(ox-Cam.x,oy-Cam.y);
+  for(const[px,py]of poly)ctx.lineTo(px-Cam.x,py-Cam.y);ctx.closePath();
+  const g=ctx.createRadialGradient(ox-Cam.x,oy-Cam.y,8,ox-Cam.x,oy-Cam.y,R);
+  g.addColorStop(0,'rgba(0,0,0,1)');g.addColorStop(0.8,'rgba(0,0,0,0.85)');g.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=g;ctx.fill();
+}
+
+/* --------------------------- MINIMAP --------------------------- */
+function drawMinimap(){
+  const m=G.map, sx=mini.width/m.w, sy=mini.height/m.h;
+  mctx.clearRect(0,0,mini.width,mini.height);
+  mctx.fillStyle='rgba(10,14,28,0.9)';mctx.fillRect(0,0,mini.width,mini.height);
+  mctx.fillStyle=m.wallColor;
+  for(const w of m.walls)mctx.fillRect(w.x*sx,w.y*sy,Math.max(1,w.w*sx),Math.max(1,w.h*sy));
+  const seeker=G.players.seeker,hider=G.players.hider;
+  // seeker always sees self
+  mctx.fillStyle='#ff5a6a';mctx.beginPath();mctx.arc(seeker.x*sx,seeker.y*sy,3,0,6.28);mctx.fill();
+  if(G.myRole==='hider'){
+    mctx.fillStyle='#4aa3ff';mctx.beginPath();mctx.arc(hider.x*sx,hider.y*sy,3,0,6.28);mctx.fill();
+    for(const d of G.decoys){mctx.fillStyle='rgba(111,192,255,0.6)';mctx.beginPath();mctx.arc(d.x*sx,d.y*sy,2.3,0,6.28);mctx.fill();}
+  } else {
+    // seeker: only radar direction arrow
+    if(G.radarShow>0&&G.radarDir!=null){
+      mctx.strokeStyle='#ffd34a';mctx.lineWidth=2;mctx.beginPath();
+      mctx.moveTo(seeker.x*sx,seeker.y*sy);
+      mctx.lineTo(seeker.x*sx+Math.cos(G.radarDir)*22,seeker.y*sy+Math.sin(G.radarDir)*22);mctx.stroke();
+    }
+  }
+}
+
+/* --------------------------- SOUND HUD --------------------------- */
+const soundHud=()=>document.getElementById('sound-hud');
+function updateSoundHud(){
+  const host=soundHud(); if(!host)return;
+  const listener=G.players[G.myRole];
+  host.innerHTML='';
+  const cx=innerWidth/2, cy=innerHeight/2;
+  for(const s of G.sounds){
+    // The sound HUD only shows sounds made by OTHERS (opponent, decoys, world events).
+    // Never show your own movement/abilities — you already know you made them.
+    if(s.owner && s.owner===G.myRole) continue;
+    const d=dist(listener.x,listener.y,s.x,s.y);
+    if(d>620) continue;
+    const ang=angleOf(s.x-listener.x,s.y-listener.y);
+    const prox=clamp(1-d/620,0.15,1);
+    const rad=90+ (1-prox)*120;
+    const el=document.createElement('div');
+    el.className='sound-dot'; el.textContent=s.icon;
+    const px=cx+Math.cos(ang)*rad, py=cy+Math.sin(ang)*rad;
+    const scale=0.7+prox*1.1, op=clamp(s.t/s.life,0,1);
+    el.style.transform=`translate(${px-innerWidth/2}px,${py-innerHeight/2}px) scale(${scale})`;
+    el.style.opacity=op;
+    host.appendChild(el);
+  }
+}
+
+/* --------------------------- HUD --------------------------- */
+function buildHotbar(){
+  const bar=document.getElementById('hotbar'); bar.innerHTML='';
+  for(const a of ABILITIES[G.myRole]){
+    const s=document.createElement('div'); s.className='slot'; s.dataset.id=a.id;
+    s.innerHTML=`<span class="key">${a.key}</span><span class="ico">${a.icon}</span>
+      <span class="cnt"></span><div class="cool"></div>`;
+    bar.appendChild(s);
+  }
+}
+function updateHUD(){
+  const mm=Math.floor(G.time/60), ss=String(Math.floor(G.time%60)).padStart(2,'0');
+  const t=document.getElementById('timer'); t.textContent=`${mm}:${ss}`;
+  t.classList.toggle('warn',G.time<=30);
+  document.querySelector('#score .s-hider').textContent=`🟦 ${G.score.hider}`;
+  document.querySelector('#score .s-seeker').textContent=`${G.score.seeker} 🟥`;
+  const rc=document.getElementById('role-chip');
+  rc.textContent=G.myRole==='hider'?'🟦 Hider':'🟥 Seeker';
+  // hotbar cooldowns
+  for(const slot of document.querySelectorAll('#hotbar .slot')){
+    const id=slot.dataset.id, a=ABILITIES[G.myRole].find(x=>x.id===id);
+    const cd=G.cd[G.myRole][id]||0, frac=a.cd?clamp(cd/a.cd,0,1):0;
+    slot.querySelector('.cool').style.transform=`scaleY(${frac})`;
+    slot.classList.toggle('ready',cd<=0);
+    const cnt=slot.querySelector('.cnt');
+    if(id==='decoy') cnt.textContent=G.decoysLeft; else cnt.textContent='';
+  }
+  // radar banner for seeker
+  const rb=document.getElementById('radar-banner');
+  if(G.myRole==='seeker'&&G.radarShow>0&&G.radarDir!=null){
+    rb.classList.remove('hidden');
+    const arrows=['→','↘','↓','↙','←','↖','↑','↗'];
+    const idx=Math.round(((G.radarDir+Math.PI)/(2*Math.PI))*8)%8;
+    document.getElementById('radar-dir').textContent=arrows[idx];
+  } else rb.classList.add('hidden');
+}
+
+let toastT=0;
+function showToast(msg){
+  const el=document.getElementById('toast'); el.textContent=msg;
+  el.classList.remove('hidden'); el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+  toastT=1.6;
+}
+
+/* --------------------------- SFX (WebAudio, no assets) --------------------------- */
+const SFX = (()=>{
+  let actx=null, music=null;
+  function ctx(){ if(!actx){try{actx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){}} return actx; }
+  function beep(freq,dur,type,vol){
+    const a=ctx(); if(!a)return;
+    const o=a.createOscillator(), g=a.createGain();
+    o.type=type||'sine'; o.frequency.value=freq;
+    g.gain.value=(vol||0.2)*G.settings.vol;
+    o.connect(g).connect(a.destination); o.start();
+    g.gain.exponentialRampToValueAtTime(0.0001,a.currentTime+dur);
+    o.stop(a.currentTime+dur);
+  }
+  const map={'👣':()=>beep(180,0.08,'sine',0.08),'💨':()=>beep(300,0.15,'sawtooth',0.12),
+    '🎭':()=>beep(520,0.2,'triangle',0.15),'💥':()=>beep(90,0.3,'square',0.2),
+    '📡':()=>beep(880,0.25,'sine',0.14),'📦':()=>beep(240,0.12,'triangle',0.12)};
+  return {
+    play(icon){ if(map[icon])map[icon](); },
+    startMusic(){ /* subtle pulsing pad */ },
+    win(){beep(660,0.15,'triangle',0.2);setTimeout(()=>beep(880,0.3,'triangle',0.2),150);},
+    lose(){beep(220,0.3,'sawtooth',0.2);},
+  };
+})();
+
+/* --------------------------- ROUND / MATCH FLOW --------------------------- */
+function endRound(winner){
+  if(!G.running)return;
+  G.running=false;
+  G.score[winner]++;
+  const iWon = winner===G.myRole;
+  iWon?SFX.win():SFX.lose();
+  const matchOver = G.score[winner]>=CFG.WINS_NEEDED;
+  const title=matchOver?(iWon?'🏆 MATCH WON':'💀 MATCH LOST'):(winner==='seeker'?'🟥 Seeker caught the Hider':'🟦 Hider survived!');
+  showEnd(title, matchOver, iWon);
+}
+function showEnd(title,matchOver,iWon){
+  const o=document.getElementById('screen-end');
+  document.getElementById('end-title').textContent=title;
+  document.getElementById('end-sub').textContent=matchOver?'First to 3 wins — final score':'Round complete';
+  document.getElementById('end-score').innerHTML=`<span style="color:var(--blue)">${G.score.hider}</span> — <span style="color:var(--red)">${G.score.seeker}</span>`;
+  document.querySelector('#screen-end [data-action="rematch"]').textContent=matchOver?'New Match ▶':'Next Round ▶';
+  o.dataset.matchOver=matchOver?'1':'';
+  o.classList.remove('hidden');
+}
+
+function startRound(){
+  document.getElementById('screen-end').classList.add('hidden');
+  resetRound(); buildHotbar();
+  showScreen('game');
+  // countdown
+  let n=3; const cd=document.getElementById('countdown'); cd.classList.remove('hidden');
+  document.getElementById('countdown-num').textContent=n;
+  G.running=false;
+  const iv=setInterval(()=>{
+    n--; if(n<=0){clearInterval(iv);cd.classList.add('hidden');G.running=true;showToast(G.myRole==='hider'?'Survive 4:00!':'Find the Hider!');}
+    else{document.getElementById('countdown-num').textContent=n;SFX.play('📡');}
+  },800);
+}
+
+/* --------------------------- MAIN LOOP --------------------------- */
+let last=0, fpsAcc=0, fpsN=0;
+function loop(ts){
+  requestAnimationFrame(loop);
+  const dt=Math.min(0.05,(ts-last)/1000||0); last=ts;
+  if(G.map && (G.running||G.screen==='game')){
+    if(G.running && G.mode!=='net'){
+      controlLocal(dt);
+      AI.update(dt);
+      updateDecoys(dt);
+      updateTimers(dt);
+      if(G.time<=0) endRound('hider');
+      G.time-=dt;
+    }
+    Cam.follow(G.players[G.myRole],dt);
+    render();
+    updateSoundHud();
+    updateHUD();
+    if(toastT>0){toastT-=dt;if(toastT<=0)document.getElementById('toast').classList.add('hidden');}
+  }
+  // fps
+  fpsAcc+=dt;fpsN++;
+  if(fpsAcc>=0.5){G.fps=Math.round(fpsN/fpsAcc);fpsAcc=0;fpsN=0;}
+}
+
+/* --------------------------- UI NAVIGATION --------------------------- */
+function showScreen(name){
+  G.screen=name;
+  for(const s of document.querySelectorAll('.screen')) s.classList.toggle('active',s.id==='screen-'+name);
+}
+function closeOverlays(){for(const o of ['screen-how','screen-settings','screen-end','screen-role'])document.getElementById(o).classList.add('hidden');}
+
+let lobbyReady={me:false,foe:true}, lobbyMap='school';
+function bindUI(){
+  document.body.addEventListener('click',e=>{
+    const b=e.target.closest('[data-action]'); if(b){handleAction(b.dataset.action);return;}
+    const mb=e.target.closest('.map-btn'); if(mb){lobbyMap=mb.dataset.map;G.mapKey=lobbyMap;
+      for(const x of document.querySelectorAll('.map-btn'))x.classList.toggle('sel',x===mb);
+      if(G.net)G.net.sendMap(lobbyMap);}
+  });
+  // settings
+  const sv=document.getElementById('set-vol');sv&&sv.addEventListener('input',()=>G.settings.vol=sv.value/100);
+  const sh=document.getElementById('set-shake');sh&&sh.addEventListener('change',()=>G.settings.shake=sh.checked);
+  const sl=document.getElementById('set-light');sl&&sl.addEventListener('change',()=>G.settings.light=sl.checked);
+  // difficulty — two selectors (settings + role picker) kept in sync and persisted
+  const diffEls=[document.getElementById('set-diff'),document.getElementById('role-diff')].filter(Boolean);
+  const saved=(()=>{try{return localStorage.getItem('decoy-diff');}catch(e){return null;}})();
+  if(saved&&DIFF[saved])G.settings.difficulty=saved;
+  const syncDiff=v=>{G.settings.difficulty=v;diffEls.forEach(el=>el.value=v);
+    try{localStorage.setItem('decoy-diff',v);}catch(e){}};
+  diffEls.forEach(el=>{el.value=G.settings.difficulty;el.addEventListener('change',()=>syncDiff(el.value));});
+}
+function handleAction(a){
+  switch(a){
+    case 'solo': G.mode='solo'; document.getElementById('screen-role').classList.remove('hidden'); break;
+    case 'role-seeker': G.myRole='seeker'; G.score={hider:0,seeker:0}; closeOverlays(); startRound(); break;
+    case 'role-hider': G.myRole='hider'; G.score={hider:0,seeker:0}; closeOverlays(); startRound(); break;
+    case 'host': showScreen('host'); break;
+    case 'join': showScreen('join'); break;
+    case 'how': document.getElementById('screen-how').classList.remove('hidden'); break;
+    case 'settings': document.getElementById('screen-settings').classList.remove('hidden'); break;
+    case 'close-overlay': closeOverlays(); break;
+    case 'back': showScreen('menu'); break;
+    case 'host-create': Net.host(); break;
+    case 'join-connect': Net.join(); break;
+    case 'leave': Net.leave(); showScreen('menu'); break;
+    case 'copy-invite': {
+      const inp=document.getElementById('invite-link');
+      const link=inp.value;
+      const done=()=>showToast('🔗 Invite link copied!');
+      if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(link).then(done).catch(()=>{inp.select();document.execCommand('copy');done();}); }
+      else { inp.select(); document.execCommand('copy'); done(); }
+      break;
+    }
+    case 'lobby-swap': Net.swap(); break;
+    case 'lobby-ready': Net.ready(); break;
+    case 'rematch': {
+      const mo=document.getElementById('screen-end').dataset.matchOver;
+      if(mo){G.score={hider:0,seeker:0};} startRound(); break; }
+    case 'to-menu': G.running=false; showScreen('menu'); document.getElementById('screen-end').classList.add('hidden'); break;
+  }
+}
+/* --------------------------- NETWORKING (thin client) --------------------------- */
+/* Derive the WebSocket server address from the page's own URL, so a friend who
+   opens http://192.168.x.x:8080/ automatically talks to that same server. */
+function defaultWsUrl(){
+  if(location.protocol==='http:'||location.protocol==='https:'){
+    const proto = location.protocol==='https:'?'wss://':'ws://';
+    return proto + location.host;            // host includes :port
+  }
+  return 'ws://localhost:8080';              // opened from file:// — assume local server
+}
+/* Build the shareable http(s) invite link for a room code. */
+function inviteLink(code){
+  if(location.protocol==='http:'||location.protocol==='https:')
+    return location.origin + '/?join=' + code;
+  return 'http://localhost:8080/?join=' + code;
+}
+
+const Net = {
+  ws:null, code:null, role:null, isHost:false,
+  connect(url,cb){
+    try{ this.ws=new WebSocket(url); }catch(e){ cb&&cb(false,'Bad address'); return; }
+    this.ws.onopen=()=>cb&&cb(true);
+    this.ws.onerror=()=>cb&&cb(false,'Connection failed — is the server running?');
+    this.ws.onclose=()=>{ if(G.mode==='net'){showToast('Disconnected');G.running=false;} };
+    this.ws.onmessage=ev=>this.onMsg(JSON.parse(ev.data));
+  },
+  send(o){ this.ws&&this.ws.readyState===1&&this.ws.send(JSON.stringify(o)); },
+  host(){
+    const url=(document.getElementById('host-server').value.trim())||defaultWsUrl();
+    const name=document.getElementById('host-name').value.trim()||'Host';
+    this.isHost=true;
+    document.getElementById('host-status').textContent='Connecting…';
+    this.connect(url,(ok,err)=>{ if(!ok){document.getElementById('host-status').textContent=err;return;}
+      G.mode='net'; G.net=this; this.send({t:'host',name}); });
+  },
+  join(){
+    const url=(document.getElementById('join-server').value.trim())||defaultWsUrl();
+    const name=document.getElementById('join-name').value.trim()||'Player';
+    const code=document.getElementById('join-code').value.trim();
+    this.isHost=false;
+    if(!code){document.getElementById('join-status').textContent='Enter a room code.';return;}
+    document.getElementById('join-status').textContent='Connecting…';
+    this.connect(url,(ok,err)=>{ if(!ok){document.getElementById('join-status').textContent=err;return;}
+      G.mode='net'; G.net=this; this.send({t:'join',name,code}); });
+  },
+  leave(){ this.ws&&this.ws.close(); this.ws=null; G.mode='solo'; G.net=null; },
+  ready(){ this.send({t:'ready'}); },
+  swap(){ this.send({t:'swap'}); },
+  sendMap(m){ this.send({t:'map',map:m}); },
+  sendInput(dx,dy,angle){ this.send({t:'input',dx,dy,angle}); },
+  sendAbility(id){ this.send({t:'ability',id}); },
+  onMsg(m){
+    switch(m.t){
+      case 'room': this.code=m.code; this.role=m.role; G.myRole=m.role;
+        document.getElementById('lobby-code').textContent=m.code; showScreen('lobby');
+        document.getElementById('host-status').textContent=''; document.getElementById('join-status').textContent='';
+        { const box=document.getElementById('invite-box');
+          document.getElementById('invite-link').value=inviteLink(m.code);
+          box.classList.remove('hidden'); }
+        break;
+      case 'error':
+        document.getElementById('host-status').textContent=m.msg;
+        document.getElementById('join-status').textContent=m.msg; break;
+      case 'lobby': this.renderLobby(m); break;
+      case 'role': G.myRole=m.role; break;
+      case 'start': G.mapKey=m.map; G.myRole=m.role; startNetRound(); break;
+      case 'state': this.applyState(m); break;
+      case 'round': G.score=m.score; endRoundNet(m.winner); break;
+      case 'toast': showToast(m.msg); break;
+    }
+  },
+  renderLobby(m){
+    for(let i=0;i<2;i++){
+      const el=document.getElementById('slot-'+i), p=m.slots[i];
+      el.querySelector('.pc-name').textContent=p?p.name:'—';
+      el.querySelector('.pc-role').textContent=(i===0?'🟦 Hider':'🟥 Seeker');
+      el.querySelector('.pc-ready').textContent=p?(p.ready?'READY ✔':'not ready'):'waiting…';
+      el.classList.toggle('ready',!!(p&&p.ready));
+    }
+    for(const x of document.querySelectorAll('.map-btn'))x.classList.toggle('sel',x.dataset.map===m.map);
+    document.getElementById('lobby-code').textContent=m.code;
+  },
+  applyState(m){
+    // thin client: server is authoritative; interpolate lightly
+    if(!G.map){G.mapKey=m.map;resetRound();}
+    const H=G.players.hider,S=G.players.seeker;
+    lerpTo(H,m.h); lerpTo(S,m.s);
+    H.invis=m.h.invis||0; H.hiding=m.h.hiding||false;
+    G.decoys=m.decoys||[]; G.time=m.time; G.score=m.score;
+    G.decoysLeft=m.decoysLeft; G.radarDir=m.radarDir; G.radarShow=m.radarShow;
+    G.dur=m.dur||G.dur; G.cd=m.cd||G.cd; G.seekerSlow=m.seekerSlow||0;
+    if(m.sounds)for(const s of m.sounds)emitSound(s.x,s.y,s.icon,s.life,s.owner);
+    if(m.foot)for(const f of m.foot)G.footsteps.push({x:f.x,y:f.y,life:CFG.FOOTSTEP_LIFE,role:f.role,decoy:f.decoy});
+  }
+};
+function lerpTo(p,s){ if(!s)return; p.x+=(s.x-p.x)*0.4; p.y+=(s.y-p.y)*0.4; p.angle=s.angle; }
+function startNetRound(){
+  document.getElementById('screen-end').classList.add('hidden');
+  resetRound(); buildHotbar(); showScreen('game'); G.running=true;
+  showToast(G.myRole==='hider'?'Survive 4:00!':'Find the Hider!');
+}
+function endRoundNet(winner){
+  G.running=false; const iWon=winner===G.myRole;
+  const mo=G.score[winner]>=CFG.WINS_NEEDED;
+  showEnd(mo?(iWon?'🏆 MATCH WON':'💀 MATCH LOST'):(winner==='seeker'?'🟥 Seeker wins round':'🟦 Hider survived!'),mo,iWon);
+}
+// in net mode, send input each frame
+setInterval(()=>{
+  if(G.mode==='net'&&G.running){
+    let dx=0,dy=0; if(Input.held('w'))dy--;if(Input.held('s'))dy++;if(Input.held('a'))dx--;if(Input.held('d'))dx++;
+    const p=G.players[G.myRole]; const wx=Cam.x+Input.mx,wy=Cam.y+Input.my;
+    const ang=p?angleOf(wx-p.x,wy-p.y):0;
+    Net.sendInput(dx,dy,ang);
+  }
+},50);
+
+/* --------------------------- BOOT --------------------------- */
+function boot(){
+  initCanvas(); Input.init(canvas); bindUI();
+  // default selected map highlight
+  for(const x of document.querySelectorAll('.map-btn'))x.classList.toggle('sel',x.dataset.map===G.mapKey);
+
+  // Pre-fill server addresses from the page's own origin (so links "just work").
+  const ws=defaultWsUrl();
+  const hs=document.getElementById('host-server'); if(hs) hs.value=ws;
+  const js=document.getElementById('join-server'); if(js) js.value=ws;
+
+  // If opened via an invite link ( /?join=123456 ), jump straight to Join prefilled.
+  const params=new URLSearchParams(location.search);
+  const joinCode=params.get('join');
+  if(joinCode){
+    showScreen('join');
+    const ci=document.getElementById('join-code'); if(ci) ci.value=joinCode.replace(/\D/g,'').slice(0,6);
+    if(js) js.value=ws;
+    document.getElementById('join-status').textContent='Invited to room '+joinCode+' — enter your name and Connect.';
+  } else {
+    showScreen('menu');
+  }
+  requestAnimationFrame(loop);
+}
+// Run now if the DOM is already parsed (e.g. when bundled into a single file or
+// injected after load); otherwise wait for it.
+if(document.readyState==='loading') window.addEventListener('DOMContentLoaded',boot);
+else boot();
+
+</script>
+
+</body></html>
